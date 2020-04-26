@@ -12,6 +12,7 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require("ffmpeg-static");
 
 const subFolderObject = listSubFolders(srcFolder);
+createDirIfNotExists(destFolder);
 subFolderObject.subFolders.forEach(subFolderPath => {
     console.log(`Handle folder ${subFolderPath.currentFolder}`);
     const baseDestPath =`${destFolder}/${subFolderPath.currentFolder}`;
