@@ -14,7 +14,7 @@ npm install
 ## Usage
 
 ```bash
-node cutThatShit.js
+node src/cutThatShit.js
 ```
 
 ## Purpose
