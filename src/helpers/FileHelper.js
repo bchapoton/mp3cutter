@@ -63,8 +63,8 @@ exports.getDestFolderPath = () => {
 function getScriptBasePath() {
     const fullPath = normalizePath(process.cwd());
     if (fullPath.endsWith(path.sep + 'src' + path.sep)) {
-        return fullPath;
+        return fullPath.substring(0, fullPath.lastIndexOf(path.sep+'src'+path.sep)) + path.sep;
     } else {
-        return fullPath + 'src' + path.sep;
+        return fullPath;
     }
 }
