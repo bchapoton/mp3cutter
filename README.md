@@ -17,6 +17,11 @@ npm install
 node src/cutThatShit.js
 ```
 
+
+```bash
+node src/cutThatShit.js -verbose
+```
+
 ## Purpose
 Cut at random position for 30s and extract metadata from mp3 in the **mp3src** sub folders.
 

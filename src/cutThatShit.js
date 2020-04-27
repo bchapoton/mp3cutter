@@ -1,31 +1,38 @@
 const fs = require('fs');
-const {srcFolder, destFolder, cutMp3CutDuration, cutMp3Bitrate} = require("./conf");
+const {cutMp3CutDuration, cutMp3Bitrate} = require("./conf");
 const {mp3duration} = require("./helpers/MP3Helper");
 const {readID3Tags} = require("./helpers/MP3Helper");
-const {isMp3} = require("./helpers/FileHelper");
-const {listFilesFromFolder} = require("./helpers/FileHelper");
-const {listSubFolders} = require("./helpers/FileHelper");
-const {createDirIfNotExists} = require("./helpers/FileHelper");
+const {
+    isMp3,
+    listFilesFromFolder,
+    listSubFolders,
+    createDirIfNotExists,
+    getDestFolderPath,
+    getSrcFolderPath
+} = require("./helpers/FileHelper");
 const {getRandomInt} = require("./helpers/IntegerHelper");
+const {getCmdArgsContext} = require('./helpers/CmdHelper');
 
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require("ffmpeg-static");
 
-const subFolderObject = listSubFolders(srcFolder);
+const cmdArgContext = getCmdArgsContext();
+const subFolderObject = listSubFolders(getSrcFolderPath());
+const destFolder = getDestFolderPath();
 createDirIfNotExists(destFolder);
 subFolderObject.subFolders.forEach(subFolderPath => {
     console.log(`Handle folder ${subFolderPath.currentFolder}`);
-    const baseDestPath =`${destFolder}/${subFolderPath.currentFolder}`;
+    const baseDestPath = `${destFolder}/${subFolderPath.currentFolder}`;
     createDirIfNotExists(baseDestPath);
 
     const filesPath = listFilesFromFolder(subFolderPath.fullPath);
-    const results = handleFiles(subFolderPath.currentFolder, baseDestPath, filesPath);
+    const results = handleFiles(cmdArgContext, subFolderPath.currentFolder, baseDestPath, filesPath);
     console.log(`handled ${results.fileNameCounter} mp3`);
     console.log(`write metadata`);
     fs.writeFileSync(`${baseDestPath}/metadata.json`, JSON.stringify(results.metadata, null, 4));
 });
 
-function handleFiles(currentFolderName, baseDestPath, filesPath) {
+function handleFiles(cmdArgContext, currentFolderName, baseDestPath, filesPath) {
     let fileNameCounter = 0;
     const metadata = {
         folder: currentFolderName,
@@ -34,7 +41,9 @@ function handleFiles(currentFolderName, baseDestPath, filesPath) {
     for (let j in filesPath) {
         const fileObject = filesPath[j];
         if (isMp3(fileObject.fileFullPath)) {
-            console.log(`'Handle file : ${fileObject.fileName}`);
+            if (cmdArgContext.verbose) {
+                console.log(`'Handle file : ${fileObject.fileName}`);
+            }
             fileNameCounter++;
             const tags = readID3Tags(fileObject.fileFullPath);
             const duration = Math.round(mp3duration(fileObject.fileFullPath) / 1000);
@@ -45,7 +54,7 @@ function handleFiles(currentFolderName, baseDestPath, filesPath) {
             const start = getRandomInt(0, duration - 30);
             const targetFile = `${baseDestPath}/${fileName}`;
 
-            cutFile(targetFile, fileObject, start);
+            cutFile(cmdArgContext, targetFile, fileObject, start);
 
             metadata.files.push({
                 artist: artist,
@@ -61,7 +70,7 @@ function handleFiles(currentFolderName, baseDestPath, filesPath) {
     }
 }
 
-function cutFile(targetFile, fileObject, start) {
+function cutFile(cmdArgContext, targetFile, fileObject, start) {
     ffmpeg.setFfmpegPath(ffmpegPath);
     const command = new ffmpeg()
         .input(fileObject.fileFullPath)
@@ -71,7 +80,9 @@ function cutFile(targetFile, fileObject, start) {
         .setDuration(cutMp3CutDuration)
         .output(targetFile)
         .on('end', () => {
-            console.log(`${fileObject.fileName} cut !`);
+            if (cmdArgContext.verbose) {
+                console.log(`${fileObject.fileName} cut !`);
+            }
         })
         .on('error', (error) => {
             console.log(`Error on cut : [${fileObject.fileName}] ${error}`);
